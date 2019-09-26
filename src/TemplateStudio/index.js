@@ -458,47 +458,69 @@ class TemplateStudio extends Component {
   handleRunLogic() {
     // XXX Should check whether the NL parses & the logic
     // compiles & the state/request are valid JSON first
-    const state = this.state;
     const compiledLogic = state.logicManager;
     const contract = JSON.parse(state.data);
     const request = JSON.parse(state.request);
     const cstate = JSON.parse(state.cstate);
     Utils.runLogic(compiledLogic, contract, request, cstate)
       .then((response) => {
-        state.log.execute = 'Execution successful!';
-        state.response = JSON.stringify(response.response, null, 2);
-        state.cstate = JSON.stringify(response.state, null, 2);
-        state.emit = JSON.stringify(response.emit, null, 2);
-        this.setState(state);
+        this.setState(prevState => {
+          return {
+            log: {
+              ...prevState.log,
+              execute: 'Execution successful!',
+            },
+            response: JSON.stringify(response.response, null, 2),
+            cstate: JSON.stringify(response.state, null, 2),
+            emit: JSON.stringify(response.emit, null, 2),
+          }
+        })
       }).catch((error) => {
-        state.response = 'null';
-        // state.cstate = 'null'; // XXX State should remain the initial state if execution fails
-        state.emit = '[]';
-        state.log.execute = `[Error Executing Template] ${JSON.stringify(error.message)}`;
-        this.setState(state);
+        this.setState(prevState => {
+          return {
+            response: 'null',
+            // cstate: 'null', // XXX State should remain the initial state if execution fails
+            emit: '[]',
+            log: {
+              ...prevState.log,
+              execute: `[Error Executing Template] ${JSON.stringify(error.message)}`,
+            },
+          }
+        })
       });
   }
 
   handleInitLogic() {
     // XXX Should check whether the NL parses & the logic
     // compiles & the state/request are valid JSON first
-    const state = this.state;
     console.log('Initializing contract');
     const compiledLogic = state.logicManager;
     const contract = JSON.parse(state.data);
     Utils.runInit(compiledLogic, contract)
       .then((response) => {
-        state.log.execute = 'Execution successful!';
-        state.response = JSON.stringify(response.response, null, 2);
-        state.cstate = JSON.stringify(response.state, null, 2);
-        state.emit = JSON.stringify(response.emit, null, 2);
-        this.setState(state);
+        this.setState(prevState => {
+          return {
+            log: {
+              ...prevState.log,
+              execute: 'Execution successful!',
+            },
+            response: JSON.stringify(response.response, null, 2),
+            cstate: JSON.stringify(response.state, null, 2),
+            emit: JSON.stringify(response.emit, null, 2),
+          }
+        })
       }).catch((error) => {
-        state.response = 'null';
-        state.cstate = 'null';
-        state.emit = '[]';
-        state.log.execute = `[Error Executing Template] ${JSON.stringify(error.message)}`;
-        this.setState(state);
+        this.setState(prevState => {
+          return {
+            response: 'null',
+            cstate: 'null',
+            emit: '[]',
+            log: {
+              ...prevState.log,
+              execute: `[Error Executing Template] ${JSON.stringify(error.message)}`,
+            },
+          }
+        })
       });
   }
 
@@ -518,9 +540,7 @@ class TemplateStudio extends Component {
   }
 
   loadTemplateFromUrl(templateURL) {
-    let state = this.state;
-    state.loading = true;
-    this.setState(state);
+    this.setState({loading: true});
     console.log(`Loading template:  ${templateURL}`);
     let promisedTemplate;
     try {
@@ -531,20 +551,23 @@ class TemplateStudio extends Component {
       return false;
     }
     return promisedTemplate.then((template) => {
-      state.templateURL = templateURL;
-      state.clause = new Clause(template);
-      state.templateName = state.clause.getTemplate().getMetadata().getName();
-      state.templateVersion = state.clause.getTemplate().getMetadata().getVersion();
-      state.templateType = state.clause.getTemplate().getMetadata().getTemplateType();
-      state.package = JSON.stringify(template.getMetadata().getPackageJson(), null, 2);
-      state.grammar = template.getParserManager().getTemplatizedGrammar();
-      state.model = template.getModelManager().getModels();
-      state.logic = template.getScriptManager().getLogic();
-      state.text = template.getMetadata().getSamples().default;
-      state.request = JSON.stringify(template.getMetadata().getRequest(), null, 2);
-      state.data = 'null';
-      state.status = 'loaded';
-      this.setState(state);
+      this.setState(prevState => {
+        return {
+          templateURL: templateURL,
+          clause: new Clause(template),
+          templateName: prevState.clause.getTemplate().getMetadata().getName(),
+          templateVersion: prevState.clause.getTemplate().getMetadata().getVersion(),
+          templateType: prevState.clause.getTemplate().getMetadata().getTemplateType(),
+          package: JSON.stringify(template.getMetadata().getPackageJson(), null, 2),
+          grammar: template.getParserManager().getTemplatizedGrammar(),
+          model: template.getModelManager().getModels(),
+          logic: template.getScriptManager().getLogic(),
+          text: template.getMetadata().getSamples().default,
+          request: JSON.stringify(template.getMetadata().getRequest(), null, 2),
+          data: 'null',
+          status: 'loaded'
+        }
+      })
       this.setState(
         Utils.compileLogic(null, state.markers, state.logic, state.model, state.log),
       ); // Now returns changes, not setting the rest of the state
@@ -553,9 +576,7 @@ class TemplateStudio extends Component {
       this.handleLogicChange(null, state, state.logic);
       this.handlePackageChange(state.package);
       this.handleInitLogic(); // Initializes the contract state
-      state = this.state;
-      state.loading = false;
-      this.setState(state);
+      this.setState({loading: false});
       return true;
     }, (reason) => {
       console.log(`LOAD FAILED! ${reason.message}`); // Error!
@@ -565,9 +586,7 @@ class TemplateStudio extends Component {
   }
 
   loadTemplateFromBuffer(buffer) {
-    let state = this.state;
-    state.loading = true;
-    this.setState(state);
+    this.setState({loading: true});
     console.log('Loading template from Buffer');
     let promisedTemplate;
     try {
@@ -578,28 +597,29 @@ class TemplateStudio extends Component {
       return false;
     }
     return promisedTemplate.then((template) => {
-      state.clause = new Clause(template);
-      state.templateName = state.clause.getTemplate().getMetadata().getName();
-      state.templateVersion = state.clause.getTemplate().getMetadata().getVersion();
-      state.templateType = state.clause.getTemplate().getMetadata().getTemplateType();
-      state.package = JSON.stringify(template.getMetadata().getPackageJson(), null, 2);
-      state.grammar = template.getParserManager().getTemplatizedGrammar();
-      state.model = template.getModelManager().getModels();
-      state.logic = template.getScriptManager().getLogic();
-      state.text = template.getMetadata().getSamples().default;
-      state.request = JSON.stringify(template.getMetadata().getRequest(), null, 2);
-      state.data = 'null';
-      state.status = 'loaded';
-      this.setState(state);
+      this.setState(prevState => {
+        return {
+          clause: new Clause(template),
+          templateName: prevState.clause.getTemplate().getMetadata().getName(),
+          templateVersion: prevState.clause.getTemplate().getMetadata().getVersion(),
+          templateType: prevState.clause.getTemplate().getMetadata().getTemplateType(),
+          package: JSON.stringify(template.getMetadata().getPackageJson(), null, 2),
+          grammar: template.getParserManager().getTemplatizedGrammar(),
+          model: template.getModelManager().getModels(),
+          logic: template.getScriptManager().getLogic(),
+          text: template.getMetadata().getSamples().default,
+          request: JSON.stringify(template.getMetadata().getRequest(), null, 2),
+          data: 'null',
+          status: 'loaded',
+        }
+      })
       this.setState(Utils.compileLogic(null, state.markers, state.logic, state.model, state.log));
       this.handleModelChange(null, state, state.model);
       this.handleSampleChange(state.text);
       this.handleLogicChange(null, state, state.logic);
       this.handlePackageChange(state.package);
       this.handleInitLogic(); // Initializes the contract state
-      state = this.state;
-      state.loading = false;
-      this.setState(state);
+      this.setState({loading: false});
       return true;
     }, (reason) => {
       console.log(`LOAD FAILED! ${reason.message}`); // Error!
